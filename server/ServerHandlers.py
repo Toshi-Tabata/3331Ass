@@ -1,53 +1,100 @@
+import json
+from threading import Lock
+from helper import debug
+import time
+
+
+# Class that handles all the commands the server needs to handle
+def handle_blocked_login(message):
+    message["message"] = "Blocked from logging in"
+    message["blocked"] = True
+
+
 class ServerHandler:
-    def __init__(self, client_socket):
+    def __init__(self, client_socket, clients, block_duration):
         self.commands = {
             "username": self.handle_username,
-            "password": self.handle_password
+            "password": self.handle_password,
+            "test": self.test
         }
         self.client_socket = client_socket
         self.userExists = False
         self.username = ""
         self.password = ""
         self.attempts = 3
+        self.clients = clients
+        self.block_duration = int(block_duration)
+
+    def is_blocked(self):
+        return time.time() - self.clients[self.username]["block_time"] < self.block_duration
+
+    def send_message(self, message):
+        self.client_socket.sendall(json.dumps(message).encode())
+
+    def login(self):
+        lock = Lock()
+        with lock:
+            self.clients[self.username].update({
+                "block_time": 0,
+                "client_socket": self.client_socket,
+                "client_obj": self
+            })
 
     def handle_username(self, username):
         self.username = username
-        with open("credentials.txt", "r+") as file:
-            for line in file:
-                user, pwd = line.split()
+        message = {
+            "message": "",
+            "blocked": False
+        }
+        if username in self.clients and self.is_blocked():
+            handle_blocked_login(message)
+        elif username in self.clients:
+            message["message"] = f"Hello {username}, what is your password?"
+            self.password = self.clients[username]["password"]
+        else:
+            message["message"] = f"Creating a new account for {username}. Choose a password."
 
-                if user == username:
-                    self.userExists = True
-
-            if self.userExists:
-                message = f"Hello {username}, what is your password?"
-                self.password = pwd
-            else:
-                message = f"Creating a new account for {username}. Choose a password."
-
-        self.client_socket.send(message.encode())
+        self.send_message(message)
 
     def handle_password(self, password):
+        debug(f"password received was {password}, matching against {self.password}")
         if self.password == "":
             self.password = password
 
-        if password == self.password:
-            message = "You have successfully logged in!"
+            with open("credentials.txt", "a") as file:
+                file.write(f"\n{self.username} {self.password}")
+
+        message = {
+            "blocked": False,
+            "passwordMatch": password == self.password,
+            "message": ""
+        }
+
+        if self.is_blocked():
+            handle_blocked_login(message)
+
+        elif message["passwordMatch"]:
+            message["message"] = "You have successfully logged in!"
+            self.login()
+
         else:
-            # TODO: handle non match
             self.attempts -= 1
             if self.attempts <= 0:
-                message = "Blocked from logging in"
+                handle_blocked_login(message)
+                self.clients[self.username]["block_time"] = time.time()
 
             else:
-                message = f"Password did not match. Number of tries left: {self.attempts}"
+                message["message"] = f"Password did not match. Number of tries left: {self.attempts}"
 
-            self.client_socket.send(message.encode())
+        self.send_message(message)
 
-            return
+    def test(self, body):
 
-        # TODO: abstract message sending
-        with open("credentials.txt", "a") as file:
-            file.write(f"\n{self.username} {self.password}")
+        message = {
+            "message": "hello",
+            "status": "OK",
+            "body": body
+        }
 
-        self.client_socket.send(message.encode())
+        msg = json.dumps(message)
+        self.client_socket.send(msg.encode())

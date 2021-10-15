@@ -1,4 +1,10 @@
-from helper import debug
+from helper import debug, server_message
+import json
+
+
+def disconnect():
+    print("CLIENT: Disconnecting")
+    exit(1)
 
 
 class ClientMethod:
@@ -10,29 +16,47 @@ class ClientMethod:
         message = f"{command} {body}"
         # TCP messages can't be empty since the client will just hang and never send anything
         if message == "" or command == "" or body == "":
-            debug("Disconnecting")
-            return False
+            disconnect()
 
         debug(f"Sending message: {message}")
 
         self.client_socket.sendall(message.encode())
 
         data = self.client_socket.recv(1024)
-        received_message = data.decode()
 
+        debug(data)
+        received_message = json.loads(data.decode())
         debug(f"Got message |{received_message}|")
+
+        if "exit" in received_message:
+            server_message(received_message["message"])
+            disconnect()
 
         return received_message
 
-    def handle_username(self, username):
-        # TODO: handle what happens based on response from server
-        return self.send_message("username", username)
+    def handle_username(self):
+        username = input("Username: ")
+        resp = self.send_message("username", username)
+        server_message(resp["message"])
 
-    def handle_password(self, password):
-        # TODO: handle what should happen
-        return self.send_message("password", password)
+        if resp["blocked"]:
+            disconnect()
+
+    def handle_password(self):
+        gettingPassword = True
+        while gettingPassword:
+
+            password = input("Password: ")
+
+            resp = self.send_message("password", password)
+            server_message(resp["message"])
+
+            gettingPassword = not resp["passwordMatch"]
+            if resp["blocked"]:
+                disconnect()
 
     def handle_logout(self):
 
         # spec doesn't require second arg but send_message() will quit program without second arg
         return self.send_message("logout", "user")
+

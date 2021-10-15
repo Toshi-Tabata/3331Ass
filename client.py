@@ -8,6 +8,7 @@
 
 from socket import socket, AF_INET, SOCK_STREAM
 import sys
+from helper import debug
 
 from ClientMethods import ClientMethod
 
@@ -21,7 +22,7 @@ SERVER_ADDRESS = (SERVER_HOST, SERVER_PORT)
 
 # define a socket for the client side, it would be used to communicate with the server
 CLIENT_SOCKET = socket(AF_INET, SOCK_STREAM)
-
+CLIENT_SOCKET.settimeout(10)
 # build connection with the server and send message to it
 CLIENT_SOCKET.connect(SERVER_ADDRESS)
 helper = ClientMethod(CLIENT_SOCKET)
@@ -29,19 +30,13 @@ helper = ClientMethod(CLIENT_SOCKET)
 
 def start_loop():
     isListening = True
+
+    helper.handle_username()
+
+    helper.handle_password()
     while isListening:
-        username = input("Username: ")
-        resp = helper.handle_username(username)
-        if not resp:
-            return
 
-        password = input("Password: ")
-        resp = helper.handle_password(password)
-
-        isListening = isListening and resp
-
-
-
+        helper.send_message(*input("What would you like to do? ").split(" ", 1))
 
 
 

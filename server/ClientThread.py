@@ -1,38 +1,50 @@
 from threading import Thread
 from helper import debug
 from ServerHandlers import ServerHandler
+import time
+import json
 
-
+# Creates thread for each client that joins
 class ClientThread(Thread):
-    def __init__(self, client_socket, client_address):
+    def __init__(self, client_socket, client_address, block_duration, timeout, clients):
         Thread.__init__(self)
         self.client_address = client_address
         self.client_socket = client_socket
 
         debug(f"===== New connection created for: {client_address}")
-        self.client_alive = True
 
-        self.handler = ServerHandler(client_socket)
+        self.handler = ServerHandler(client_socket, clients, block_duration)
+
+        self.timeout = int(timeout)
+        self.lastActive = time.time()
+
+        self.clients = clients
+
+    def is_active(self):
+        return time.time() - self.lastActive < self.timeout
 
     def run(self):
-        while self.client_alive:
+        while self.is_active():
             data = self.client_socket.recv(1024)
             message = data.decode()
             debug(f"Received message {message}")
 
             # Empty message from client indicates that the client has disconnected
-            if message == "":
-                self.client_alive = False
+            if message == "" or not self.is_active():
                 debug(f"User disconnected: {self.client_address}")
-                continue
+                break
 
             command, body = message.split(" ", 1)
 
             if command in self.handler.commands:
                 self.handler.commands[command](body)
+                self.lastActive = time.time()
+                # TODO: refresh the timeout timer
 
             else:
                 debug(f"[recv] Echoing: {message}")
-                self.client_socket.send(message.encode())
+                self.client_socket.sendall(message.encode())
+
+        self.client_socket.sendall(json.dumps({"exit": True, "message": "User timed out or disconnected"}).encode())
 
 

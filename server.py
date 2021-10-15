@@ -15,10 +15,11 @@ import sys
 
 from helper import debug
 
+
+# Runs the server
 def main():
-    # acquire server host and port from command line parameter
-    if len(sys.argv) != 2:
-        print(f"\n===== Usage: python3 {sys.argv[0]} <server port> =====\n")
+    if len(sys.argv) != 4:
+        print(f"\n===== Usage: python3 {sys.argv[0]} <server port> <block_duration> <timeout> =====\n")
         exit(0)
 
     SERVER_HOST = "127.0.0.1"
@@ -31,9 +32,23 @@ def main():
 
     debug("\n===== Server is running =====")
 
+    # {is_blocked::bool, client_socket::socket, client_obj::ServerHandler}
+    clients = {}
+
+    with open("credentials.txt", "r") as file:
+        for line in file:
+            user, password = line.split()
+            clients[user] = {
+                "block_time": 0,
+                "client_socket": None,
+                "client_obj": None,
+                "password": password,
+            }
+
     while True:
         SERVER_SOCKET.listen()
-        clientThread = ClientThread(*SERVER_SOCKET.accept())
+        clientThread = ClientThread(*SERVER_SOCKET.accept(), sys.argv[2], sys.argv[3], clients)
+
         clientThread.start()
 
 

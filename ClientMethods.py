@@ -12,26 +12,27 @@ class ClientMethod:
         self.client_socket = client_socket
 
     # Returns received_message if message was sent successfully
-    def send_message(self, command, body):
+    def send_message(self, command, body=""):
         message = f"{command} {body}"
         # TCP messages can't be empty since the client will just hang and never send anything
-        if message == "" or command == "" or body == "":
+        if message == "" or command == "":
             disconnect()
 
         debug(f"Sending message: {message}")
 
         self.client_socket.sendall(message.encode())
 
-        data = self.client_socket.recv(1024)
-
-        debug(data)
-        received_message = json.loads(data.decode())
-        debug(f"Got message |{received_message}|")
-
-        if "exit" in received_message:
-            server_message(received_message["message"])
-            disconnect()
-
+        # data = self.client_socket.recv(1024)
+        #
+        # debug(data)
+        # received_message = json.loads(data.decode())
+        # debug(f"Got message |{received_message}|")
+        #
+        # if "exit" in received_message:
+        #     print("exiting!!!!!")
+        #     server_message(received_message["message"])
+        #     disconnect()
+        received_message = ""
         return received_message
 
     def handle_username(self):

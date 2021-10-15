@@ -4,6 +4,7 @@ from ServerHandlers import ServerHandler
 import time
 import json
 
+
 # Creates thread for each client that joins
 class ClientThread(Thread):
     def __init__(self, client_socket, client_address, block_duration, timeout, clients):
@@ -25,7 +26,11 @@ class ClientThread(Thread):
 
     def run(self):
         while self.is_active():
-            data = self.client_socket.recv(1024)
+            try:
+                data = self.client_socket.recv(1024)
+            except ConnectionResetError:
+                self.handler.logout()
+                return
             message = data.decode()
             debug(f"Received message {message}")
 
@@ -39,12 +44,11 @@ class ClientThread(Thread):
             if command in self.handler.commands:
                 self.handler.commands[command](body)
                 self.lastActive = time.time()
-                # TODO: refresh the timeout timer
 
             else:
                 debug(f"[recv] Echoing: {message}")
                 self.client_socket.sendall(message.encode())
 
         self.client_socket.sendall(json.dumps({"exit": True, "message": "User timed out or disconnected"}).encode())
-
+        self.handler.logout()
 

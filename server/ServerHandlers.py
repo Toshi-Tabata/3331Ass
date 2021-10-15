@@ -28,8 +28,21 @@ class ServerHandler:
     def is_blocked(self):
         return time.time() - self.clients[self.username]["block_time"] < self.block_duration
 
-    def send_message(self, message):
-        self.client_socket.sendall(json.dumps(message).encode())
+    def send_message(self, message, person=None):
+        if person is None:
+            person = self.client_socket
+        person.sendall(json.dumps(message).encode())
+
+    def broadcast_message(self, text):
+        message = {"message": text}
+        for user in self.clients:
+            curr_socket = self.clients[user]["client_socket"]
+            if curr_socket is not None and user != self.username:
+                self.send_message(message, curr_socket)
+
+    def broadcast_login(self):
+        # TODO: change this to a dict and set the backend to listen for a dict
+        self.broadcast_message(f"{self.username} has logged in.")
 
     def login(self):
         lock = Lock()
@@ -39,6 +52,17 @@ class ServerHandler:
                 "client_socket": self.client_socket,
                 "client_obj": self
             })
+
+        self.broadcast_login()
+
+    def logout(self):
+        self.clients[self.username].update({
+            "client_socket": None,
+            "client_obj": None,
+        })
+
+        # TODO: change this to a dict and set the backend to listen for a dict
+        self.broadcast_message(f"{self.username} has logged out.")
 
     def handle_username(self, username):
         self.username = username
@@ -63,6 +87,13 @@ class ServerHandler:
 
             with open("credentials.txt", "a") as file:
                 file.write(f"\n{self.username} {self.password}")
+
+            self.clients[self.username] = {
+                "block_time": 0,
+                "client_socket": self.client_socket,
+                "client_obj": self,
+                "password": password,
+            }
 
         message = {
             "blocked": False,

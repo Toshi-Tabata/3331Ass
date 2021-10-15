@@ -8,7 +8,9 @@
 
 from socket import socket, AF_INET, SOCK_STREAM
 import sys
-from helper import debug
+from threading import Thread
+from helper import debug, server_message
+import json
 
 from ClientMethods import ClientMethod
 
@@ -19,24 +21,50 @@ if len(sys.argv) != 2:
 SERVER_HOST = "localhost"
 SERVER_PORT = int(sys.argv[1])
 SERVER_ADDRESS = (SERVER_HOST, SERVER_PORT)
-
-# define a socket for the client side, it would be used to communicate with the server
 CLIENT_SOCKET = socket(AF_INET, SOCK_STREAM)
-CLIENT_SOCKET.settimeout(10)
-# build connection with the server and send message to it
+CLIENT_SOCKET.settimeout(3600)  # wait an hour with no communication from server before ending connection
 CLIENT_SOCKET.connect(SERVER_ADDRESS)
 helper = ClientMethod(CLIENT_SOCKET)
 
+# class SendMessage(Thread):
+#     def __init__(self, text):
+#         Thread.__init__(self)
+#
+#         self.ans = input(text)
+#
+#     def get_ans(self):
+#         return self.ans
+
+
+def print_server_info():
+    while True:
+        data = CLIENT_SOCKET.recv(1024)
+        received_message = json.loads(data.decode())
+        print(received_message)
+        message = received_message["message"]
+        server_message(message)
+
+        # TODO: this is where we parse what the server is sending us
+        # e.g. user sends us message: here
+
+
+
+t = Thread(target=print_server_info)
+t.setDaemon(True)
+
 
 def start_loop():
-    isListening = True
 
     helper.handle_username()
 
     helper.handle_password()
-    while isListening:
 
-        helper.send_message(*input("What would you like to do? ").split(" ", 1))
+    t.start()
+
+    while True:
+        print("oy")
+        helper.send_message(input())
+        print("yo")
 
 
 

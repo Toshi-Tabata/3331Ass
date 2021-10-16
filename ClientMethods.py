@@ -11,6 +11,17 @@ class ClientMethod:
     def __init__(self, client_socket):
         self.client_socket = client_socket
 
+        self.response = {
+            "username": self.username_response,
+            "password": self.password_response,
+            "broadcast": self.broadcast_response,
+        }
+        self.getting_password = True
+        self.response_pending = False
+
+    def broadcast_response(self, resp):
+        debug("I don't know what to do with broadcast_response")
+
     # Returns received_message if message was sent successfully
     def send_message(self, command, body=""):
         message = f"{command} {body}"
@@ -36,28 +47,32 @@ class ClientMethod:
         return received_message
 
     def handle_username(self):
-        username = input("Username: ")
-        resp = self.send_message("username", username)
+        self.send_message("username", input("Username: "))
+
+    def username_response(self, resp):
+        server_message(resp["message"])
+        if resp["blocked"]:
+            disconnect()
+
+    def handle_password(self):
+        while self.getting_password:
+            password = input("Password: ")
+            self.response_pending = True
+            self.send_message("password", password)
+
+            while self.response_pending:
+                pass
+
+    def password_response(self, resp):
+        self.getting_password = not resp["passwordMatch"]
+        self.response_pending = False
         server_message(resp["message"])
 
         if resp["blocked"]:
             disconnect()
 
-    def handle_password(self):
-        gettingPassword = True
-        while gettingPassword:
-
-            password = input("Password: ")
-
-            resp = self.send_message("password", password)
-            server_message(resp["message"])
-
-            gettingPassword = not resp["passwordMatch"]
-            if resp["blocked"]:
-                disconnect()
-
     def handle_logout(self):
 
         # spec doesn't require second arg but send_message() will quit program without second arg
-        return self.send_message("logout", "user")
+        return self.send_message("logout", " ")
 

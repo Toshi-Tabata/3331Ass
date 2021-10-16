@@ -3,11 +3,12 @@ DEBUG = True
 
 
 def debug(message):
-    if DEBUG:
+    if DEBUG and message != "":
 
         print(f"DEBUG:      {message}")
 
 
 def server_message(message):
-    print(f"SERVER: {message}")
+    if message != "":
+        print(f"SERVER: {message}")
 

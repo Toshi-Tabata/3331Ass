@@ -47,7 +47,8 @@ class ClientThread(Thread):
 
             else:
                 debug(f"[recv] Echoing: {message}")
-                self.client_socket.sendall(message.encode())
+                message = {"message": message}
+                self.client_socket.sendall(json.dumps(message).encode())
 
         self.client_socket.sendall(json.dumps({"exit": True, "message": "User timed out or disconnected"}).encode())
         self.handler.logout()

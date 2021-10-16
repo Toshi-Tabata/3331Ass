@@ -34,14 +34,16 @@ class ServerHandler:
         person.sendall(json.dumps(message).encode())
 
     def broadcast_message(self, text):
-        message = {"message": text}
+        message = {
+            "command": "broadcast",
+            "message": text
+        }
         for user in self.clients:
             curr_socket = self.clients[user]["client_socket"]
             if curr_socket is not None and user != self.username:
                 self.send_message(message, curr_socket)
 
     def broadcast_login(self):
-        # TODO: change this to a dict and set the backend to listen for a dict
         self.broadcast_message(f"{self.username} has logged in.")
 
     def login(self):
@@ -61,14 +63,14 @@ class ServerHandler:
             "client_obj": None,
         })
 
-        # TODO: change this to a dict and set the backend to listen for a dict
         self.broadcast_message(f"{self.username} has logged out.")
 
     def handle_username(self, username):
         self.username = username
         message = {
             "message": "",
-            "blocked": False
+            "blocked": False,
+            "command": "username"
         }
         if username in self.clients and self.is_blocked():
             handle_blocked_login(message)
@@ -98,7 +100,8 @@ class ServerHandler:
         message = {
             "blocked": False,
             "passwordMatch": password == self.password,
-            "message": ""
+            "message": "",
+            "command": "password"
         }
 
         if self.is_blocked():

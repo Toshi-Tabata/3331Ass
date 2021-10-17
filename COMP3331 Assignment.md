@@ -136,12 +136,14 @@ Application Layer Message Format
         is_blocked: bool,
         client_socket: class,
         client_obj: class,
+        client_thread: class,
         password: password,
         queue: [queue of messages to be sent to client],
         blacklist: set()
     }
 }
 
+- need access to the thread for specific information
 
 - who is online
 - log on time for each user
@@ -177,3 +179,7 @@ server.py contains the main file -> ClientThread.py contains the client's thread
 
 
 
+## Assumptions
+
+- Password cannot be empty
+- Username cannot be empty

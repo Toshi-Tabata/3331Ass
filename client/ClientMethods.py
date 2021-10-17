@@ -3,8 +3,9 @@ import time
 import json
 
 
-def disconnect():
-    print("CLIENT: Disconnecting")
+def disconnect(quiet=False):
+    if not quiet:
+        print("CLIENT: Disconnecting")
     exit(1)
 
 
@@ -17,17 +18,45 @@ class ClientMethod:
             "password": self.password_response,
             "broadcast": self.broadcast_response,
             "blacklist": self.blacklist_response,
+            "server": self.server_response,
+            "logout": self.handle_logout,
             "exit": self.exit_response
         }
+
+        self.handle = {
+            "blacklist": self.handle_blacklist,
+            "whoelse": self.handle_whoelse,
+            "": self.exit_response,
+        }
+
         self.getting_password = True
-        self.response_pending = False
+        self.response_pending = True
+        self.blocked = False
+
+    def handle_whoelse(self, body):
+        self.send_message("whoelse", "none")
+
+    def await_reponse(self):
+        while self.response_pending:
+            time.sleep(0.5)  # prevent huge CPU usage
+
+    def handle_blacklist(self, body):
+        self.send_message("blacklist", body)
 
     def broadcast_response(self, resp):
-        debug("I don't know what to do with broadcast_response")
+        if resp["from"] != "":
+            print(f"<{resp['from']}>: {resp['message']}")
+        else:
+            server_message(resp["message"])
 
-    def exit_response(self, resp):
-        debug("Exiting")
+    def server_response(self, resp):
         server_message(resp["message"])
+
+    def exit_response(self, resp=None):
+        debug("Exiting")
+
+        if resp is not None and resp != "":
+            server_message(resp["message"])
         disconnect()
 
     # Returns received_message if message was sent successfully
@@ -37,27 +66,36 @@ class ClientMethod:
         if message == "" or command == "":
             disconnect()
 
-        debug(f"Sending message: {message}")
+        debug(f"Sending message: |{message}|")
 
         self.client_socket.sendall(message.encode())
 
     def handle_username(self):
-        self.send_message("username", input("Username: "))
+        username = input("Username: ")
+        if username == "":
+            disconnect()
+        self.send_message("username", username)
 
     def username_response(self, resp):
         server_message(resp["message"])
+        self.response_pending = False
         if resp["blocked"]:
+            self.blocked = True
             disconnect()
 
     def handle_password(self):
         while self.getting_password:
+            self.await_reponse()
+
+            if self.blocked:
+                disconnect(True)
+
             password = input("Password: ")
+            if password == "":
+                disconnect()
             self.response_pending = True
             self.send_message("password", password)
-
-            # block until we get a response from the server
-            while self.response_pending:
-                time.sleep(0.5)  # prevent huge CPU usage
+            self.await_reponse()
 
     def password_response(self, resp):
         self.getting_password = not resp["passwordMatch"]
@@ -65,6 +103,7 @@ class ClientMethod:
         server_message(resp["message"])
 
         if resp["blocked"]:
+            self.blocked = True
             disconnect()
 
     def handle_blacklist(self, username):

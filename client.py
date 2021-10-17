@@ -12,7 +12,7 @@ from threading import Thread
 from helper import debug, server_message
 import json
 
-from ClientMethods import ClientMethod, disconnect
+from client.ClientMethods import ClientMethod
 
 if len(sys.argv) != 2:
     print(f"\n===== Error usage, python3 {sys.argv[0]} SERVER_PORT ======\n")
@@ -53,8 +53,18 @@ def start_loop():
     helper.handle_password()
 
     while True:
+        command = input().split(" ", 2)
+        body = ""
 
-        helper.send_message(input())
+        if len(command) == 2:
+            command, body = command
+        else:
+            command = command[0]
+
+        if command in helper.handle:
+            helper.handle[command](body)
+        else:
+            server_message("Invalid command")
 
 
 def main():

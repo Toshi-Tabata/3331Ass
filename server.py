@@ -13,7 +13,7 @@ from socket import socket, AF_INET, SOCK_STREAM
 from ClientThread import ClientThread
 import sys
 
-from helper import debug
+from helper import debug, get_server_init_state
 
 
 # Runs the server
@@ -38,14 +38,8 @@ def main():
     with open("credentials.txt", "r") as file:
         for line in file:
             user, password = line.split()
-            clients[user] = {
-                "block_time": 0,
-                "client_socket": None,
-                "client_obj": None,
-                "password": password,
-                "blacklist": set(),
-                "offline_messages": []  # TODO: pop from this list as they're sent
-            }
+            clients[user] = get_server_init_state()
+            clients[user]["password"] = password
 
     while True:
         SERVER_SOCKET.listen()

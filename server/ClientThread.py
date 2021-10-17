@@ -14,7 +14,7 @@ class ClientThread(Thread):
 
         debug(f"===== New connection created for: {client_address}")
 
-        self.handler = ServerHandler(client_socket, clients, block_duration)
+        self.handler = ServerHandler(client_socket, clients, block_duration, self)
 
         self.timeout = int(timeout)
         self.lastActive = time.time()
@@ -32,15 +32,16 @@ class ClientThread(Thread):
                 self.handler.logout()
                 return
             message = data.decode()
-            debug(f"Received message {message}")
+            debug(f"Received message |{message}|")
 
             # Empty message from client indicates that the client has disconnected
             if message == "" or not self.is_active():
                 debug(f"User disconnected: {self.client_address}")
                 break
 
+            debug(f"|{message}|")
             command, body = message.split(" ", 1)
-
+            debug(f"|{command}|{body}|")
             if command in self.handler.commands:
                 self.handler.commands[command](body)
                 self.lastActive = time.time()

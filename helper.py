@@ -1,4 +1,4 @@
-
+import time
 DEBUG = True
 
 
@@ -20,6 +20,17 @@ def get_server_init_state():
         "client_obj": None,
         "client_thread": None,
         "password": "",
+        "log_on_time": -1,
         "blacklist": set(),
         "offline_messages": []  # TODO: pop from this list as they're sent
     }
+
+
+# Return a list of users that haven't blacklisted person
+def get_user_list(clients, person):
+    users = []
+    for user in clients:
+        if person not in clients[user]["blacklist"] and user != person:
+            users.append(user)
+
+    return users

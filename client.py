@@ -61,10 +61,7 @@ def start_loop():
         else:
             command = command[0]
 
-        if command in helper.handle:
-            helper.handle[command](body)
-        else:
-            server_message("Invalid command")
+        helper.handle.get(command, helper.send_message)(command, body)
 
 
 def main():

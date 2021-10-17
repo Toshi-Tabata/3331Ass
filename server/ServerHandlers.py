@@ -1,6 +1,6 @@
 import json
 from threading import Lock
-from helper import debug, get_server_init_state
+from helper import debug, get_server_init_state, get_user_list
 import time
 
 
@@ -15,8 +15,10 @@ class ServerHandler:
         self.commands = {
             "username": self.handle_username,
             "password": self.handle_password,
-            "blacklist": self.handle_blacklist,
+            "block": self.handle_blacklist,
             "whoelse": self.handle_whoelse,
+            "whoelsesince": self.handle_whoelsesince,
+            "unblock": self.handle_unblock,
             "test": self.test
         }
         self.client_socket = client_socket
@@ -52,15 +54,11 @@ class ServerHandler:
             "message": text,
             "from": username
         }
-        for user in self.clients:
-            if self.username in self.clients[user]["blacklist"]:
-                debug(f"{self.username} was blocked by {user}. Skipping this broadcast")
+        for user in get_user_list(self.clients, self.username):
+            curr_socket = self.clients[user]["client_socket"]
 
-            else:
-                curr_socket = self.clients[user]["client_socket"]
-
-                if curr_socket is not None and user != self.username:
-                    self.send_message(message, curr_socket)
+            if curr_socket is not None and user != self.username:
+                self.send_message(message, curr_socket)
 
     def broadcast_login(self):
         self.broadcast_message(f"{self.username} has logged in.")
@@ -72,7 +70,8 @@ class ServerHandler:
                 "client_socket": self.client_socket,
                 "client_obj": self,
                 "client_thread": self.thread,
-            })
+                "log_on_time": time.time()
+        })
 
         self.broadcast_login()
 
@@ -114,7 +113,8 @@ class ServerHandler:
                 "client_socket": self.client_socket,
                 "client_obj": self,
                 "client_thread": self.thread,
-                "password": password
+                "log_on_time": time.time(),
+                "password": password,
             })
 
         message = {
@@ -148,23 +148,61 @@ class ServerHandler:
             "command": "server",
             "message": "",
         }
-        if username in self.clients:
+        if username == self.username:
+            message["message"] = "Cannot block yourself!"
+        elif username in self.clients:
             self.clients[self.username]["blacklist"].add(username)
             debug(f"Added to blacklist. Set is now {self.clients[self.username]['blacklist']}")
-            message["message"] = f"Blacklisted {username}."
+            message["message"] = f"Blocked {username}."
         else:
             message["message"] = f"Could not find user {username}"
+
+        self.send_message(message)
+
+    # negative duration returns all active users
+    def get_active_since(self, duration):
+        users = []
+        debug(f"dur: {duration}")
+        # I want all users as of dur minutes ago
+        for user in get_user_list(self.clients, self.username):
+
+            if duration < 0 and self.clients[user]["client_thread"] is not None:
+                debug("returning all users that are active")
+                users.append(user)
+            elif (time.time() - duration) <= self.clients[user]["log_on_time"]:
+
+                debug(f"{time.time() - duration} vs {self.clients[user]['log_on_time']}")
+                users.append(user)
+
+        return users
+
+    def handle_whoelsesince(self, duration):
+        message = {
+            "command": "server",
+            "message": "",
+
+        }
+        try:
+            duration = int(duration)
+            active_users = f"Users logged within {duration} seconds ago:\n"
+            active = self.get_active_since(duration)
+
+            if not active:
+                active_users = "Nobody else was online since then!"
+            else:
+                active_users += "\n".join(active)
+
+            message["message"] = active_users
+
+        except ValueError:
+            message["message"] = "usage: whoelsesince <integer>"
 
         self.send_message(message)
 
     # Body will be given but ignored
     def handle_whoelse(self, body):
         active_users = "Active Users:\n"
-        active = []
-        for user in self.clients:
-            thr = self.clients[user]["client_thread"]
-            if thr is not None and user != self.username:
-                active.append(user)
+        active = self.get_active_since(-1)
 
         if not active:
             active_users = "Nobody else is online!"
@@ -176,6 +214,22 @@ class ServerHandler:
             "message": active_users,
 
         }
+        self.send_message(message)
+
+    def handle_unblock(self, username):
+        message = {
+            "command": "server",
+            "message": "",
+        }
+        if username == self.username:
+            message["message"] = "Cannot unblock yourself!"
+        elif username in self.clients and username in self.clients[self.username]["blacklist"]:
+            self.clients[self.username]["blacklist"].remove(username)
+            debug(f"Removed from blacklist. Set is now {self.clients[self.username]['blacklist']}")
+            message["message"] = f"Unblocked {username}."
+        else:
+            message["message"] = f"Could not find user {username} in your blocked list"
+
         self.send_message(message)
 
     def test(self, body):

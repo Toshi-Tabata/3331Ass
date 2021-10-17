@@ -183,3 +183,6 @@ server.py contains the main file -> ClientThread.py contains the client's thread
 
 - Password cannot be empty
 - Username cannot be empty
+- Blocking is essentially bi-directional
+  - User A blocks user B has the same behaviour as User B blocking user A
+  - The spec states that 

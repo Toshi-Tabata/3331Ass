@@ -18,7 +18,7 @@ class ClientThread(Thread):
 
         self.timeout = int(timeout)
         self.lastActive = time.time()
-
+        self.logged_in_time = time.time()
         self.clients = clients
 
     def is_active(self):
@@ -47,8 +47,10 @@ class ClientThread(Thread):
                 self.lastActive = time.time()
 
             else:
-                debug(f"[recv] Echoing: {message}")
-                message = {"message": message}
+                message = {
+                    "command": "server",
+                    "message": "That command doesn't exist!"
+                }
                 self.client_socket.sendall(json.dumps(message).encode())
 
         self.client_socket.sendall(json.dumps({"command": "exit", "message": "User timed out or disconnected"}).encode())

@@ -19,13 +19,11 @@ class ClientMethod:
             "broadcast": self.broadcast_response,
             "blacklist": self.blacklist_response,
             "server": self.server_response,
-            "logout": self.handle_logout,
             "exit": self.exit_response
         }
 
         self.handle = {
-            "blacklist": self.handle_blacklist,
-            "whoelse": self.handle_whoelse,
+            "logout": self.exit_response,
             "": self.exit_response,
         }
 
@@ -33,15 +31,24 @@ class ClientMethod:
         self.response_pending = True
         self.blocked = False
 
-    def handle_whoelse(self, body):
-        self.send_message("whoelse", "none")
+    # def handle_whoelse(self, body):
+    #     self.send_message("whoelse")
+
+    # def handle_whoelsesince(self, body):
+    #     try:
+    #         self.send_message("whoelsesince", int(body))
+    #     except ValueError:
+    #         server_message("usage: whoelsesince <integer>")
 
     def await_reponse(self):
         while self.response_pending:
             time.sleep(0.5)  # prevent huge CPU usage
 
-    def handle_blacklist(self, body):
-        self.send_message("blacklist", body)
+    # def handle_blacklist(self, body):
+    #     self.send_message("blacklist", body)
+    #
+    # def handle_unblock(self, body):
+    #     self.send_message("unblock", body)
 
     def broadcast_response(self, resp):
         if resp["from"] != "":
@@ -52,7 +59,7 @@ class ClientMethod:
     def server_response(self, resp):
         server_message(resp["message"])
 
-    def exit_response(self, resp=None):
+    def exit_response(self, resp=None, body=None):
         debug("Exiting")
 
         if resp is not None and resp != "":
@@ -60,7 +67,7 @@ class ClientMethod:
         disconnect()
 
     # Returns received_message if message was sent successfully
-    def send_message(self, command, body=""):
+    def send_message(self, command, body=None):
         message = f"{command} {body}"
         # TCP messages can't be empty since the client will just hang and never send anything
         if message == "" or command == "":
@@ -106,15 +113,14 @@ class ClientMethod:
             self.blocked = True
             disconnect()
 
-    def handle_blacklist(self, username):
-        self.send_message("blacklist", username)
+    # def handle_blacklist(self, username):
+    #     self.send_message("blacklist", username)
 
     def blacklist_response(self, resp):
         server_message(resp["message"])
 
-
-    def handle_logout(self):
-
-        # spec doesn't require second arg but send_message() will quit program without second arg
-        return self.send_message("logout", " ")
+    #
+    # def handle_logout(self, body=None):
+    #     # spec doesn't require second arg but send_message() will quit program without second arg
+    #     return self.send_message("logout", "None")
 

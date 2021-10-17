@@ -43,6 +43,8 @@ def main():
                 "client_socket": None,
                 "client_obj": None,
                 "password": password,
+                "blacklist": set(),
+                "offline_messages": []  # TODO: pop from this list as they're sent
             }
 
     while True:

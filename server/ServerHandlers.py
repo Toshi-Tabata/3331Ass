@@ -15,6 +15,7 @@ class ServerHandler:
         self.commands = {
             "username": self.handle_username,
             "password": self.handle_password,
+            "blacklist": self.handle_blacklist,
             "test": self.test
         }
         self.client_socket = client_socket
@@ -119,6 +120,18 @@ class ServerHandler:
 
             else:
                 message["message"] = f"Password did not match. Number of tries left: {self.attempts}"
+
+        self.send_message(message)
+
+    def handle_blacklist(self, username):
+        message = {
+            "message": "",
+        }
+        if username in self.clients:
+            self.clients[self.username]["blacklist"].add(username)
+            message["message"] = f"Blacklisted {username}."
+        else:
+            message["message"] = f"Could not find user {username}"
 
         self.send_message(message)
 

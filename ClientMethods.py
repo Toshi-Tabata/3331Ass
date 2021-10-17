@@ -1,4 +1,5 @@
 from helper import debug, server_message
+import time
 import json
 
 
@@ -15,12 +16,19 @@ class ClientMethod:
             "username": self.username_response,
             "password": self.password_response,
             "broadcast": self.broadcast_response,
+            "blacklist": self.blacklist_response,
+            "exit": self.exit_response
         }
         self.getting_password = True
         self.response_pending = False
 
     def broadcast_response(self, resp):
         debug("I don't know what to do with broadcast_response")
+
+    def exit_response(self, resp):
+        debug("Exiting")
+        server_message(resp["message"])
+        disconnect()
 
     # Returns received_message if message was sent successfully
     def send_message(self, command, body=""):
@@ -32,19 +40,6 @@ class ClientMethod:
         debug(f"Sending message: {message}")
 
         self.client_socket.sendall(message.encode())
-
-        # data = self.client_socket.recv(1024)
-        #
-        # debug(data)
-        # received_message = json.loads(data.decode())
-        # debug(f"Got message |{received_message}|")
-        #
-        # if "exit" in received_message:
-        #     print("exiting!!!!!")
-        #     server_message(received_message["message"])
-        #     disconnect()
-        received_message = ""
-        return received_message
 
     def handle_username(self):
         self.send_message("username", input("Username: "))
@@ -60,8 +55,9 @@ class ClientMethod:
             self.response_pending = True
             self.send_message("password", password)
 
+            # block until we get a response from the server
             while self.response_pending:
-                pass
+                time.sleep(0.5)  # prevent huge CPU usage
 
     def password_response(self, resp):
         self.getting_password = not resp["passwordMatch"]
@@ -70,6 +66,13 @@ class ClientMethod:
 
         if resp["blocked"]:
             disconnect()
+
+    def handle_blacklist(self, username):
+        self.send_message("blacklist", username)
+
+    def blacklist_response(self, resp):
+        server_message(resp["message"])
+
 
     def handle_logout(self):
 

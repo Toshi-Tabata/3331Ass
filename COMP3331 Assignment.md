@@ -119,26 +119,10 @@ Application Layer Message Format
 
 # TODO
 
-- Timeout
-  - `ServerHandler` needs dictionary for every user
-  - Store username, time since last activity
-  - Function to refresh user activity
-  - Function to log someone out
-- When a user issues a command, check that they are logged in
-  - make function for checking - returns boolean
-    - sends message that the user is logged out
-    - log the user out - will be automatic since we just update the dict
-- Create a separate thread for checking user logging in/out
-  - create a thread per person that times out/refreshes
-
-- Server should be its own class
-
 
 
 - Offline messaging
   - Server has a list that stores all information for a user
-
-
 
 ```python
 - Every user will have access to this dictionary
@@ -153,8 +137,17 @@ Application Layer Message Format
         client_socket: class,
         client_obj: class,
         password: password,
+        queue: [queue of messages to be sent to client],
+        blacklist: set()
     }
 }
+
+
+- who is online
+- log on time for each user
+- last active time
+- offline message queue
+- 
 ```
 
 - trade offs with this design
@@ -162,9 +155,19 @@ Application Layer Message Format
     - Could create a second array of tuple with (`user's last online time`, `username`) but that would introduce redundant data which adds the possibility to desync with each other and increase space requirements. Would decrease time complexity to O(log n) though.
   - Use set instead of list for blocked users to reduce complexity from O(n^2^) to O(n) for searching this set.
     - also allows using set difference to find who is logged in and not blocked for simplicity
-- Each thread has access
-  - Writes their own username + information when they have logged in
-  - 
+  
+  
+
+### Message response
+
+```
+{
+from_server: boolean - might not need
+from: "<username>"
+
+message: string
+}
+```
 
 
 

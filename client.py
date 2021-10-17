@@ -37,45 +37,24 @@ def print_server_info():
                 and received_message["command"] in helper.response:
             debug(received_message)
             command = received_message["command"]
-            message = received_message["message"]
-            server_message(message)
-
-            if "exit" in received_message:
-                debug("Exiting")
-                server_message(received_message["message"])
-                disconnect()
-
             helper.response[command](received_message)
 
         else:
             debug(f"Got invalid message: {received_message}")
 
 
-
-
-
-
-
-        # TODO: this is where we parse what the server is sending us
-        # e.g. user sends us message: here
-
-
 t = Thread(target=print_server_info)
 t.setDaemon(True)
+
 
 def start_loop():
     t.start()
     helper.handle_username()
-
     helper.handle_password()
-
 
     while True:
 
         helper.send_message(input())
-
-
-
 
 
 def main():

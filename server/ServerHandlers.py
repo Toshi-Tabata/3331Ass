@@ -42,11 +42,6 @@ class ServerHandler:
             "offline": False,
             "from": ""
         }
-        # message = {
-        #     "command": "broadcast",
-        #     "message": text,
-        #     "from": username
-        # }
 
         parts = body.split(" ", 1)
         if len(parts) < 2:
@@ -109,14 +104,37 @@ class ServerHandler:
             "message": text,
             "from": username
         }
-        for user in get_user_list(self.clients, self.username):
+        users = get_user_list(self.clients, self.username)
+        if len(self.clients) != len(users) + 1:
+            self.send_message({
+                "command": "broadcast",
+                "message": "Some users could not receive your message because they have blocked you.",
+                "from": ""
+            })
+
+        for user in users:
             curr_socket = self.clients[user]["client_socket"]
 
             if curr_socket is not None and user != self.username:
                 self.send_message(message, curr_socket)
 
+    # Broadcast to anyone who isn't blocked by self.username
+    def broadcast_to_unblocked(self, text):
+        message = {
+            "command": "broadcast",
+            "message": text,
+            "from": ""
+        }
+
+        my_blacklist = self.clients[self.username]["blacklist"]
+        for user in self.clients:
+            sock = self.clients[user]["client_socket"]
+            if user not in my_blacklist and sock is not None and user != self.username:
+                self.send_message(message, sock)
+
     def broadcast_login(self):
-        self.broadcast_message(f"{self.username} has logged in.")
+        self.broadcast_to_unblocked(f"{self.username} has logged in.")
+        # self.broadcast_message(f"{self.username} has logged in.")
 
     def login(self):
 
@@ -143,21 +161,32 @@ class ServerHandler:
         self.broadcast_login()
 
     def logout(self):
+        if self.username == "":
+            return
         self.update_clients({
             "client_socket": None,
             "client_obj": None,
             "client_thread": None,
         })
         if self.username:
-            self.broadcast_message(f"{self.username} has logged out.")
+            self.broadcast_to_unblocked(f"{self.username} has logged out.")
+            # self.broadcast_message(f"{self.username} has logged out.")
 
     def handle_username(self, username):
-        self.username = username
+
         message = {
             "message": "",
             "blocked": False,
             "command": "username"
         }
+        if username in self.clients and self.clients[username]["client_socket"] is not None:
+            message["message"] = "You are already logged in"
+            message["command"] = "exit"
+            message["blocked"] = True
+            self.send_message(message)
+            return
+
+        self.username = username
         if username in self.clients and self.is_blocked():
             handle_blocked_login(message)
         elif username in self.clients:
@@ -165,7 +194,6 @@ class ServerHandler:
             self.password = self.clients[username]["password"]
         else:
             message["message"] = f"Creating a new account for {username}. Choose a password."
-
         self.send_message(message)
 
     def handle_password(self, password):

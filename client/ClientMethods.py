@@ -31,24 +31,9 @@ class ClientMethod:
         self.response_pending = True
         self.blocked = False
 
-    # def handle_whoelse(self, body):
-    #     self.send_message("whoelse")
-
-    # def handle_whoelsesince(self, body):
-    #     try:
-    #         self.send_message("whoelsesince", int(body))
-    #     except ValueError:
-    #         server_message("usage: whoelsesince <integer>")
-
     def await_reponse(self):
         while self.response_pending:
             time.sleep(0.5)  # prevent huge CPU usage
-
-    # def handle_blacklist(self, body):
-    #     self.send_message("blacklist", body)
-    #
-    # def handle_unblock(self, body):
-    #     self.send_message("unblock", body)
 
     def broadcast_response(self, resp):
         if resp["from"] != "":
@@ -61,8 +46,10 @@ class ClientMethod:
 
     def exit_response(self, resp=None, body=None):
         debug("Exiting")
+        self.response_pending = False
+        self.blocked = True
 
-        if resp is not None and resp != "":
+        if resp is not None and resp != "" and resp != "logout":
             server_message(resp["message"])
         disconnect()
 

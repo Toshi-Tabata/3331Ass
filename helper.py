@@ -4,7 +4,6 @@ DEBUG = True
 
 def debug(message):
     if DEBUG and message != "":
-
         print(f"DEBUG:      {message}")
 
 

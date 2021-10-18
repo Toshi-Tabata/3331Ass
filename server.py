@@ -32,7 +32,6 @@ def main():
 
     debug("\n===== Server is running =====")
 
-    # {is_blocked::bool, client_socket::socket, client_obj::ServerHandler}
     clients = {}
 
     with open("credentials.txt", "r") as file:

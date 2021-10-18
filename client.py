@@ -26,21 +26,25 @@ CLIENT_SOCKET.settimeout(3600)  # wait an hour with no communication from server
 CLIENT_SOCKET.connect(SERVER_ADDRESS)
 helper = ClientMethod(CLIENT_SOCKET)
 
-
 def print_server_info():
     while True:
         data = CLIENT_SOCKET.recv(1024)
-        received_message = json.loads(data.decode())
+        data = data.decode().split("\r\n")
+        debug(data)
+        for datum in data:
+            if datum == "":
+                continue
+            received_message = json.loads(datum)
 
-        if "command" in received_message \
-                and "message" in received_message \
-                and received_message["command"] in helper.response:
-            debug(received_message)
-            command = received_message["command"]
-            helper.response[command](received_message)
+            if "command" in received_message \
+                    and "message" in received_message \
+                    and received_message["command"] in helper.response:
+                debug(received_message)
+                command = received_message["command"]
+                helper.response[command](received_message)
 
-        else:
-            debug(f"Got invalid message: {received_message}")
+            else:
+                debug(f"Got invalid message: {received_message}")
 
 
 t = Thread(target=print_server_info)
@@ -53,9 +57,9 @@ def start_loop():
     helper.handle_password()
 
     while True:
-        command = input().split(" ", 2)
+        command = input().split(" ", 1)
         body = ""
-
+        debug(command)
         if len(command) == 2:
             command, body = command
         else:

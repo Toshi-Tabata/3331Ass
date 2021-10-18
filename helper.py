@@ -22,7 +22,7 @@ def get_server_init_state():
         "password": "",
         "log_on_time": -1,
         "blacklist": set(),
-        "offline_messages": []  # TODO: pop from this list as they're sent
+        "offline_messages": []  # (msg, user)
     }
 
 

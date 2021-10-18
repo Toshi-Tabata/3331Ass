@@ -18,7 +18,9 @@ class ServerHandler:
             "block": self.handle_blacklist,
             "whoelse": self.handle_whoelse,
             "whoelsesince": self.handle_whoelsesince,
+            "broadcast": self.handle_broadcast,
             "unblock": self.handle_unblock,
+            "message": self.handle_message,
             "test": self.test
         }
         self.client_socket = client_socket
@@ -29,6 +31,56 @@ class ServerHandler:
         self.block_duration = int(block_duration)
         self.lock = Lock()
         self.thread = thread
+
+    def handle_broadcast(self, message):
+        self.broadcast_message(message, self.username)
+
+    def handle_message(self, body):
+        message = {
+            "command": "broadcast",  # TODO idk if this is right - client also needs to receive messages
+            "message": "",
+            "offline": False,
+            "from": ""
+        }
+        # message = {
+        #     "command": "broadcast",
+        #     "message": text,
+        #     "from": username
+        # }
+
+        parts = body.split(" ", 1)
+        if len(parts) < 2:
+            message["message"] = "Usage: message <username> <message>"
+            self.send_message(message)
+            return
+
+        user = parts[0]
+        msg = parts[1]
+        recipient = None
+
+        debug(f"Sending message from {self.username} to {user}: {msg}")
+        if user not in self.clients:
+            message["message"] = "Could not find user"
+        elif user == self.username:
+            message["message"] = "Can't send yourself a message"
+        elif self.username in self.clients[user]["blacklist"]:
+            message["message"] = "This user has blocked you."
+        elif self.clients[user]["client_socket"] is None:
+            # user offline. add to buffer
+            self.clients[user]["offline_messages"].append((msg, self.username))
+            return
+        else:
+            message["message"] = msg
+            message["from"] = self.username
+            recipient = self.clients[user]["client_socket"]
+
+        self.send_message(message, recipient)
+        # TODO:
+        """
+        - send all messages in the buffer to the user when they log on
+        
+        client side needs to handle new message
+        """
 
     def update_clients(self, obj, user=None):
         if user is None:
@@ -46,7 +98,10 @@ class ServerHandler:
     def send_message(self, message, person=None):
         if person is None:
             person = self.client_socket
-        person.sendall(json.dumps(message).encode())
+
+        json_str = json.dumps(message) + "\r\n"
+        person.sendall(json_str.encode())
+        debug(f"Just send {message}")
 
     def broadcast_message(self, text, username=""):
         message = {
@@ -73,6 +128,18 @@ class ServerHandler:
                 "log_on_time": time.time()
         })
 
+        for msg, user in self.clients[self.username]["offline_messages"]:
+            message = {
+                "command": "broadcast",
+                "message": msg,
+                "from": user
+            }
+            debug(f"{msg} {user}")
+            self.send_message(message)
+
+        self.update_clients({
+            "offline_messages": []
+        })
         self.broadcast_login()
 
     def logout(self):
@@ -81,8 +148,8 @@ class ServerHandler:
             "client_obj": None,
             "client_thread": None,
         })
-
-        self.broadcast_message(f"{self.username} has logged out.")
+        if self.username:
+            self.broadcast_message(f"{self.username} has logged out.")
 
     def handle_username(self, username):
         self.username = username
@@ -129,8 +196,10 @@ class ServerHandler:
 
         elif message["passwordMatch"]:
             message["message"] = "You have successfully logged in!"
-
+            self.send_message(message)
             self.login()
+            # Early return so we can send_message before login()
+            return
 
         else:
             self.attempts -= 1

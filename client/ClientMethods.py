@@ -3,6 +3,7 @@ from threading import Thread
 from helper import debug, server_message
 import time
 import json
+from socket import SHUT_RDWR
 from client.P2P import P2P_server, P2P_client
 
 
@@ -36,6 +37,7 @@ class ClientMethod:
         self.handle = {
             "logout": self.exit_response,
             "private": self.handle_private,
+            "stopprivate": self.handle_stopprivate,
             "y": self.handle_startprivate_accept,
             "n": self.handle_startprivate_decline,
             "": self.exit_response,
@@ -49,6 +51,20 @@ class ClientMethod:
         self.peer_username = ""
         self.peer_address = ""
         self.peer_port = ""
+
+    def handle_stopprivate(self, _, username):
+        if username == "":
+            server_message(f"Usage: startprivate <user>")
+            return
+        elif username != self.peer_username:
+            server_message(f"You do not have an active private server with {username}")
+            return
+
+        self.send_message("ping")
+
+        self.p2p_socket.socket.shutdown(SHUT_RDWR)
+
+
 
     def startprivate_response(self, resp):
         debug(f"RESPONSE WAS |{resp}|")
@@ -146,9 +162,11 @@ class ClientMethod:
 
         recipient, message = body.split(" ", 1)
 
-        # TODO:
-        # ping server if valid
-        # check if user is still alive using socket.connect_ex((addr, port)) == 0
+        if recipient != self.peer_username:
+            server_message(f"You have no started a private session with {recipient}!")
+            return
+
+        self.send_message("ping")
         self.p2p_socket.send_message(message)
 
     def await_reponse(self):

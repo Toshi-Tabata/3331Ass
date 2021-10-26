@@ -23,6 +23,7 @@ class ServerHandler:
             "message": self.handle_message,
             "startprivate": self.handle_startprivate,
             "startprivate_resp": self.handle_startprivate_resp,
+            "ping": self.handle_ping,
             "test": self.test
         }
         self.client_socket = client_socket
@@ -35,6 +36,10 @@ class ServerHandler:
         self.thread = thread
         self.address = address
         self.port = port
+
+    def handle_ping(self, _):
+        debug("Client pinged - keeping alive")
+        return
 
     def handle_startprivate(self, username):
         message = {

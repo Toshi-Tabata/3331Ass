@@ -2,15 +2,24 @@ from socket import socket, AF_INET, SOCK_STREAM
 from threading import Thread
 from helper import debug, server_message
 
+
+def handle_disconnect(p2p_obj):
+    server_message("Peer has disconnected!")
+    p2p_obj.socket = None
+
+
 def private_peer_message_handler(socket, p2p_obj):
     while True:
         try:
             data = socket.recv(1024)
             debug(data.decode())
+            if data.decode() == "":
+                handle_disconnect(p2p_obj)
+                return
+
             print(f"{data.decode()}")
         except ConnectionResetError:
-            server_message("Peer has disconnected!")
-            p2p_obj.socket = None
+            handle_disconnect(p2p_obj)
             break
 
 def send_message(peer_username, socket, message):

@@ -181,8 +181,80 @@ server.py contains the main file -> ClientThread.py contains the client's thread
 
 
 
+## P2P
+
+Requirements
+
+- Both users are online
+- user isn't blocked
+- close connection when one of the users disconnects
+- user don't time out if they're using private commands
+  - i.e. need to send something to the backend whenever a message is being sent
+  - ping the server to show that this user is alive
+
+
+
+
+
+1. `startprivate user2`
+   1. if blocked, just return "can't start because user is blocked"
+2. `Server: User1 wants to start a private chat. y/n`
+   1. `n` == send message to user1 that they didn't want to
+   2. y == start transmission
+   3. Note that you need to hijack the existing input()
+3. `Server to user1: Connection has been established with user2`
+
+
+
+
+
+1. Client1 sends request to server to create a connection with Client2 using `startprivate Client2`.  (same way all server messages are handledq)
+2. Server sends message to `Client2` after error checking asking to create a connection with the given username, address and port (using ServerHandlers.py's `handle_startprivate`)
+3. `Client2` responds with y/n. If y, client creates a thread to listen on that port
+4. Server  relays this + address + port. If y:
+5. `Client1`  starts listening for this address + port
+6. `private` will get routed through the normal ClientMethods handler
+
+
+
+
+
+1. `startprivate username`
+2. `handle_startprivate()` in ServerHandlers.py - done
+3. `startprivate_response()` in ClientMethods.py
+4. y gets sent to server + setup the socket for themselves 
+5. `handle_startprivate_accept()` sends information back to Client1
+6. `startprivate_init()` in client1 to create their own socket
+7. 
+
+
+
+h: startprivate j
+
+j starts their server
+
+h gets info about server
+
+h connects to server
+
+
+
+
+
+- TODO: when logging out, send a message to any peers we're connected to, to disconnect them
+
+
+
+
+
 ## Assumptions
 
 - Password cannot be empty
 - Username cannot be empty
-- 
+
+- "private <user\> <message\> command sending an error message" is overwritten by a connection not existing
+  - the command still fails when a connection doesn't exist or is offline, but the reason will end up being "You need to start a private session with a user first" since a connection needs to be set up first
+  - technically fulfils requirements so I left it
+
+
+

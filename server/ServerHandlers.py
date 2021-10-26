@@ -11,7 +11,7 @@ def handle_blocked_login(message):
 
 
 class ServerHandler:
-    def __init__(self, client_socket, clients, block_duration, thread):
+    def __init__(self, client_socket, clients, block_duration, thread, address, port):
         self.commands = {
             "username": self.handle_username,
             "password": self.handle_password,
@@ -21,6 +21,8 @@ class ServerHandler:
             "broadcast": self.handle_broadcast,
             "unblock": self.handle_unblock,
             "message": self.handle_message,
+            "startprivate": self.handle_startprivate,
+            "startprivate_resp": self.handle_startprivate_resp,
             "test": self.test
         }
         self.client_socket = client_socket
@@ -31,13 +33,64 @@ class ServerHandler:
         self.block_duration = int(block_duration)
         self.lock = Lock()
         self.thread = thread
+        self.address = address
+        self.port = port
+
+    def handle_startprivate(self, username):
+        message = {
+            "command": "startprivate_ans",
+            "message": f"{self.username} would like to start a private chat with you! y/n",
+            "username": self.username,
+            "address": self.address,
+            "port": self.port,
+            "OK": False,
+            "from": ""
+        }
+
+        recipient = self.username
+
+        if username == self.username:
+            message["message"] = "Can't setup a connection with yourself!"
+
+        elif username not in self.clients:
+            message["message"] = "User could not be found"
+
+        elif username not in get_user_list(self.clients, self.username):
+            message["message"] = "This user has blocked you"
+
+        elif self.clients[username]["client_thread"] is None or not self.clients[username]["client_thread"].is_active():
+            message["message"] = "This user is offline"
+
+        else:
+            message["OK"] = True
+            recipient = username
+
+        self.send_message(message, self.clients[recipient]["client_socket"])
+
+    def handle_startprivate_resp(self, message):
+        didAccept, username, port, address = message.split(" ", 3)
+        debug(f"Got response for startprivate: {didAccept == 'True'}")
+        didAccept = didAccept == "True"
+
+        debug(f"Got a response from peer that they have created a server\n"
+              f"at address: {address}{port}")
+        message = {
+            "command": "startprivate_init",
+            "message": f"{self.username} has {'accepted' if didAccept else 'declined'} the private message request!",
+            "username": self.username,
+            "address": address,
+            "port": port,
+            "OK": didAccept,
+            "from": ""
+        }
+        self.send_message(message, self.clients[username]["client_socket"])
 
     def handle_broadcast(self, message):
         self.broadcast_message(message, self.username)
 
     def handle_message(self, body):
         message = {
-            "command": "broadcast",  # TODO idk if this is right - client also needs to receive messages
+            "command": "broadcast",
             "message": "",
             "offline": False,
             "from": ""
@@ -70,12 +123,6 @@ class ServerHandler:
             recipient = self.clients[user]["client_socket"]
 
         self.send_message(message, recipient)
-        # TODO:
-        """
-        - send all messages in the buffer to the user when they log on
-        
-        client side needs to handle new message
-        """
 
     def update_clients(self, obj, user=None):
         if user is None:

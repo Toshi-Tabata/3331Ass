@@ -12,6 +12,7 @@ from threading import Thread
 from helper import debug, server_message
 import json
 
+
 from client.ClientMethods import ClientMethod
 
 if len(sys.argv) != 2:
@@ -26,7 +27,8 @@ CLIENT_SOCKET.settimeout(3600)  # wait an hour with no communication from server
 CLIENT_SOCKET.connect(SERVER_ADDRESS)
 helper = ClientMethod(CLIENT_SOCKET)
 
-def print_server_info():
+
+def handle_server_messages():
     while True:
         data = CLIENT_SOCKET.recv(1024)
         data = data.decode().split("\r\n")
@@ -47,7 +49,7 @@ def print_server_info():
                 debug(f"Got invalid message: {received_message}")
 
 
-t = Thread(target=print_server_info)
+t = Thread(target=handle_server_messages)
 t.setDaemon(True)
 
 

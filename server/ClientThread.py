@@ -5,7 +5,7 @@ import time
 import json
 
 
-# Creates thread for each client that joins
+# Creates thread for each client that joins`
 class ClientThread(Thread):
     def __init__(self, client_socket, client_address, block_duration, timeout, clients):
         Thread.__init__(self)
@@ -14,7 +14,7 @@ class ClientThread(Thread):
 
         debug(f"===== New connection created for: {client_address}")
 
-        self.handler = ServerHandler(client_socket, clients, block_duration, self)
+        self.handler = ServerHandler(client_socket, clients, block_duration, self, *client_address)
 
         self.timeout = int(timeout)
         self.lastActive = time.time()

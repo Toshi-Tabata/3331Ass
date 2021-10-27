@@ -1,8 +1,5 @@
-from threading import Thread
-
 from helper import debug, server_message
 import time
-import json
 from socket import SHUT_RDWR
 from client.P2P import P2P_server, P2P_client
 
@@ -29,8 +26,7 @@ class ClientMethod:
             "server": self.server_response,
             "startprivate_ans": self.startprivate_response,
             "startprivate_init": self.startprivate_init,
-            "private": self.private_response,
-            "exit": self.exit_response
+            "exit": self.handle_timeout
         }
 
         # Handle the commands issued by the user
@@ -47,10 +43,19 @@ class ClientMethod:
         self.response_pending = True
         self.blocked = False
 
-        # TODO: is this useless info?
         self.peer_username = ""
         self.peer_address = ""
         self.peer_port = ""
+
+    def handle_timeout(self, resp=None, body=None):
+        self.response_pending = False
+        self.blocked = True
+
+        if resp is not None and resp != "" and resp != "logout":
+            server_message(resp["message"])
+
+        print("Press enter to exit...")
+        exit(1)
 
     def handle_stopprivate(self, _, username):
         if username == "":
@@ -137,15 +142,8 @@ class ClientMethod:
 
         debug(f"FOR CLIENT: {self.peer_username}")
         self.p2p_socket = P2P_client(self.peer_address, self.peer_port, self.username)
-        #TODO: create a thread that listens for messages
 
         debug(f"!<><><><><!> setting p2p socket: {self.p2p_socket} <><>><><>")
-
-
-    def private_response(self, resp):
-
-        # TODO parse the message received, reuse broadcast_response() - could probs just use this directly
-        pass
 
     def handle_private(self, command, body=None):
         if self.p2p_socket is None or self.p2p_socket.socket is None:
@@ -239,14 +237,5 @@ class ClientMethod:
             self.blocked = True
             disconnect()
 
-    # def handle_blacklist(self, username):
-    #     self.send_message("blacklist", username)
-
     def blacklist_response(self, resp):
         server_message(resp["message"])
-
-    #
-    # def handle_logout(self, body=None):
-    #     # spec doesn't require second arg but send_message() will quit program without second arg
-    #     return self.send_message("logout", "None")
-

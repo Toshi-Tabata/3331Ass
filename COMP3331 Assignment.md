@@ -109,11 +109,16 @@ Application Layer Message Format
 
 - Send JSON object sent as bytes
   - object contains information relevant to the request being made
-- 
 
 
 
+## Trade Offs
 
+### Timeout
+
+- For timeout, I didn't want to create another thread for just timing out to save on resources on the server.
+  - Threading would have allowed the user to be notified the moment they have been timed out
+  - Currently, the user is notified if they are timed out after they have tried to issue a command.
 
 
 
@@ -256,5 +261,5 @@ h connects to server
   - the command still fails when a connection doesn't exist or is offline, but the reason will end up being "You need to start a private session with a user first" since a connection needs to be set up first
   - technically fulfils requirements so I left it
 
-
+- Spec doesn't specify what should happen on the other peer's side when one user uses stopprivate, so I made it the same behaviour as what happens when a user logs out 
 

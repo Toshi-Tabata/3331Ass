@@ -8,10 +8,10 @@ def handle_disconnect(p2p_obj):
     p2p_obj.socket = None
 
 
-def private_peer_message_handler(socket, p2p_obj):
+def private_peer_message_handler(sock, p2p_obj):
     while True:
         try:
-            data = socket.recv(1024)
+            data = sock.recv(1024)
             debug(data.decode())
             if data.decode() == "":
                 handle_disconnect(p2p_obj)
@@ -21,6 +21,7 @@ def private_peer_message_handler(socket, p2p_obj):
         except ConnectionResetError:
             handle_disconnect(p2p_obj)
             break
+
 
 def send_message(peer_username, socket, message):
     if message == "":
@@ -60,6 +61,7 @@ class P2P_server(Thread):
     def send_message(self, message):
         send_message(self.peer_username, self.socket, message)
 
+
 class P2P_client:
     def __init__(self, address, port, peer_username):
         # todo: check if i still need these
@@ -76,26 +78,3 @@ class P2P_client:
 
     def send_message(self, message):
         send_message(self.peer_username, self.socket, message)
-
-class P2P:
-    def __init__(self):
-
-        """
-        Need a way to create a "server"
-        Need a way to create a "client"
-
-        one peer == server, one == client
-
-        peer1 sends request
-
-        peer2 accepts and starts listening (server)
-        peer1 sends request to join (client)
-
-
-
-        """
-
-
-
-
-        pass

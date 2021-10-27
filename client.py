@@ -9,7 +9,7 @@
 from socket import socket, AF_INET, SOCK_STREAM
 import sys
 from threading import Thread
-from helper import debug, server_message
+from helper import debug
 import json
 
 
@@ -41,7 +41,7 @@ def handle_server_messages():
             if "command" in received_message \
                     and "message" in received_message \
                     and received_message["command"] in helper.response:
-                debug(received_message)
+                debug(f"handle_server_messages(): |{received_message}|")
                 command = received_message["command"]
                 helper.response[command](received_message)
 
